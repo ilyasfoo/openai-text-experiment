@@ -15,11 +15,11 @@ export default async function (req, res) {
     return;
   }
 
-  const animal = req.body.animal || '';
-  if (animal.trim().length === 0) {
+  const description = req.body.description || '';
+  if (description.trim().length === 0) {
     res.status(400).json({
       error: {
-        message: "Please enter a valid animal",
+        message: "Please enter a valid description",
       }
     });
     return;
@@ -28,10 +28,20 @@ export default async function (req, res) {
   try {
     const completion = await openai.createCompletion({
       model: "text-davinci-003",
-      prompt: generatePrompt(animal),
-      temperature: 0.6,
+      prompt: generatePrompt(description),
+      temperature: 0.8,
+      max_tokens: 100,
     });
-    res.status(200).json({ result: completion.data.choices[0].text });
+    const text = completion.data.choices[0].text;
+    const style1start = text.indexOf('Style 1: ');
+    const style1end = text.indexOf('Style 2: ');
+    const results = [
+      text.slice(style1start, style1end).replace('Style 1: ', '').trim(),
+      text.slice(style1end).replace('Style 2: ', '').trim(),
+    ];
+    res.status(200).json({
+      result: results,
+    });
   } catch(error) {
     // Consider adjusting the error handling logic for your use case
     if (error.response) {
@@ -48,15 +58,10 @@ export default async function (req, res) {
   }
 }
 
-function generatePrompt(animal) {
-  const capitalizedAnimal =
-    animal[0].toUpperCase() + animal.slice(1).toLowerCase();
-  return `Suggest three names for an animal that is a superhero.
+function generatePrompt(description) {
+  return `As an expert online marketer, paraphrase the following product description into 2 different styles.
+  Style 1: Extremely exciting and engaging
+  Style 2: Extremely sarcastic and funny
 
-Animal: Cat
-Names: Captain Sharpclaw, Agent Fluffball, The Incredible Feline
-Animal: Dog
-Names: Ruff the Protector, Wonder Canine, Sir Barks-a-Lot
-Animal: ${capitalizedAnimal}
-Names:`;
+  Description: ${description}`;
 }
